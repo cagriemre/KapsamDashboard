@@ -35,6 +35,8 @@ namespace KapsamDashboard.UI
         private TableLayoutPanel tab2Layout;
         private DataGridView dataGridView3;
         private DataGridView dataGridView4;
+        private TextBox manualCountTextBox;
+        private Button updateManualButton;
 
         public MainForm()
         {
@@ -273,34 +275,83 @@ namespace KapsamDashboard.UI
             };
             mainTabControl.TabPages.Add(tab2);
 
-            // Tab 2 Layout - Chart üstte 50, tablolar altta %25 + %25
+            // Tab 2 Layout - 3 satır: kontroller, chart, tablolar
             tab2Layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 2,
+                RowCount = 3,  // 3 satır yap
                 Padding = new Padding(15),
                 BackColor = Color.FromArgb(25, 42, 86)
             };
 
             tab2Layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             tab2Layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50)); // Chart
-            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50)); // Tablolar
+            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80)); // TextBox ve Button için
+            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 60)); // Chart
+            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 40)); // Tablolar
             tab2.Controls.Add(tab2Layout);
+
+            // TextBox ve Button için panel
+            var controlPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(25, 42, 86),
+                Margin = new Padding(8)
+            };
+            tab2Layout.Controls.Add(controlPanel, 0, 0);
+            tab2Layout.SetColumnSpan(controlPanel, 2);
+            tab2Layout.Controls.Add(controlPanel, 0, 0);
+
+            var lblManual = new Label
+            {
+                Text = "Manuel Order Sayısı:",
+                Location = new Point(controlPanel.Width - 400, 25),
+                Size = new Size(180, 30),
+                ForeColor = Color.White,
+                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            controlPanel.Controls.Add(lblManual);
+
+            manualCountTextBox = new TextBox
+            {
+                Location = new Point(controlPanel.Width - 210, 20),
+                Size = new Size(90, 40),
+                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
+                Text = "10",
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            controlPanel.Controls.Add(manualCountTextBox);
+
+            updateManualButton = new Button
+            {
+                Text = "Güncelle",
+                Location = new Point(controlPanel.Width - 110, 12),
+                Size = new Size(100, 35),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(108, 166, 205),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Franklin Gothic", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            updateManualButton.FlatAppearance.BorderSize = 0;
+            updateManualButton.Click += UpdateManualButton_Click;
+            controlPanel.Controls.Add(updateManualButton);
 
             // Overdose Chart - 2 sütuna yayılsın
             overdoseChart = CreateOverdoseChart();
-            tab2Layout.Controls.Add(overdoseChart, 0, 0);
+            tab2Layout.Controls.Add(overdoseChart, 0, 1);
             tab2Layout.SetColumnSpan(overdoseChart, 2);
 
             // İlk tablo
             dataGridView3 = CreateDataGridView("Overdose Anonim-Seyreltme Analizi");
-            tab2Layout.Controls.Add(dataGridView3, 0, 1);
+            tab2Layout.Controls.Add(dataGridView3, 0, 2);
 
             // İkinci tablo
             dataGridView4 = CreateDataGridView("Eksik Tamamlama Sayısı Analizi");
-            tab2Layout.Controls.Add(dataGridView4, 1, 1);
+            tab2Layout.Controls.Add(dataGridView4, 1, 2);
         }
 
         private Chart CreateOverdoseChart()
@@ -837,7 +888,82 @@ namespace KapsamDashboard.UI
                 dataGridView4.DataSource = dt;
             }
         }
+        private void UpdateManualButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // TextBox'dan sayıyı al
+                if (!int.TryParse(manualCountTextBox.Text, out int manualCount) || manualCount < 0)
+                {
+                    MessageBox.Show("Lütfen geçerli bir sayı girin.", "Hata",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
+                // Buton durumunu değiştir
+                updateManualButton.Text = "Güncelleniyor...";
+                updateManualButton.Enabled = false;
+                this.Cursor = Cursors.WaitCursor;
+
+                using (SqlConnection conn = new SqlConnection(ConnectionStringHelper.GetConnectionString()))
+                {
+                    conn.Open();
+
+                    // Önce TÜM kayıtları FALSE yap
+                    string resetQuery = "   ";
+                    SqlCommand resetCmd = new SqlCommand(resetQuery, conn);
+                    resetCmd.ExecuteNonQuery();
+
+                    // Toplam kayıt sayısını al
+                    string countQuery = "SELECT COUNT(*) FROM [order].[Order]";
+                    SqlCommand countCmd = new SqlCommand(countQuery, conn);
+                    int totalRecords = (int)countCmd.ExecuteScalar();
+
+                    // Eğer istenen sayı toplam kayıttan fazlaysa, hata ver
+                    if (manualCount > totalRecords)
+                    {
+                        MessageBox.Show($"Hata: Girilen sayı ({manualCount}) toplam kayıt sayısından ({totalRecords}) fazla olamaz!", "Hata",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    if (manualCount > 0)
+                    {
+                        // Girilen sayı kadar RANDOM kayıtları seç ve TRUE yap
+                        string randomUpdateQuery = @"
+                        UPDATE [order].[Order] 
+                        SET IsManual = 1 
+                            WHERE Id IN (
+                        SELECT TOP (@ManualCount) Id 
+                            FROM [order].[Order] 
+                            ORDER BY NEWID()
+            )";
+
+                        SqlCommand updateCmd = new SqlCommand(randomUpdateQuery, conn);
+                        updateCmd.Parameters.AddWithValue("@ManualCount", manualCount);
+                        updateCmd.ExecuteNonQuery();
+                    }
+                }
+
+                MessageBox.Show($"Database Güncellendi\n{manualCount} kayıt IsManual=True\nKalan kayıtlar IsManual=False", "Başarılı",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Verileri yenile
+                LoadData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Güncelleme hatası:\n{ex.Message}", "Hata",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Buton durumunu eski haline getir
+                updateManualButton.Text = "Güncelle";
+                updateManualButton.Enabled = true;
+                this.Cursor = Cursors.Default;
+            }
+        }
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
