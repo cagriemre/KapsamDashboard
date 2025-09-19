@@ -910,13 +910,17 @@ namespace KapsamDashboard.UI
                     conn.Open();
 
                     // Önce TÜM kayıtları FALSE yap
-                    string resetQuery = "   ";
+                    string resetQuery = "UPDATE [order].[Order] SET IsManual = 0 where AdministrationDate between @StartDate and @EndDate";
                     SqlCommand resetCmd = new SqlCommand(resetQuery, conn);
-                    resetCmd.ExecuteNonQuery();
+                    resetCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                    resetCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+                    int resetCount = resetCmd.ExecuteNonQuery();
 
                     // Toplam kayıt sayısını al
-                    string countQuery = "SELECT COUNT(*) FROM [order].[Order]";
+                    string countQuery = "SELECT COUNT(*) FROM [order].[Order] WHERE AdministrationDate BETWEEN @StartDate AND @EndDate";
                     SqlCommand countCmd = new SqlCommand(countQuery, conn);
+                    countCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                    countCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
                     int totalRecords = (int)countCmd.ExecuteScalar();
 
                     // Eğer istenen sayı toplam kayıttan fazlaysa, hata ver
@@ -927,26 +931,32 @@ namespace KapsamDashboard.UI
                         return;
                     }
 
+                    int updatedManualCount = 0;
+
                     if (manualCount > 0)
                     {
                         // Girilen sayı kadar RANDOM kayıtları seç ve TRUE yap
                         string randomUpdateQuery = @"
-                        UPDATE [order].[Order] 
-                        SET IsManual = 1 
-                            WHERE Id IN (
+                    UPDATE [order].[Order] 
+                    SET IsManual = 1 
+                    WHERE Id IN (
                         SELECT TOP (@ManualCount) Id 
-                            FROM [order].[Order] 
-                            ORDER BY NEWID()
-            )";
+                        FROM [order].[Order] 
+                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                        ORDER BY NEWID()
+                    )";
 
                         SqlCommand updateCmd = new SqlCommand(randomUpdateQuery, conn);
                         updateCmd.Parameters.AddWithValue("@ManualCount", manualCount);
-                        updateCmd.ExecuteNonQuery();
-                    }
-                }
+                        updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                        updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
 
-                MessageBox.Show($"Database Güncellendi\n{manualCount} kayıt IsManual=True\nKalan kayıtlar IsManual=False", "Başarılı",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        updatedManualCount = updateCmd.ExecuteNonQuery();
+                    }
+
+                    MessageBox.Show($"Database Güncellendi\nManuel İşlem Sayısı: {updatedManualCount} \nCihaz İşlemi Sayısı: {resetCount - updatedManualCount}", "Başarılı",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
 
                 // Verileri yenile
                 LoadData();
