@@ -39,6 +39,8 @@ namespace KapsamDashboard.UI
         private DataGridView dataGridView4;
         private TextBox manualCountTextBox;
         private Button updateManualButton;
+        private TextBox semiAutoCountTextBox;
+        private Button updateSemiAutoButton;
 
         public MainForm()
         {
@@ -305,10 +307,49 @@ namespace KapsamDashboard.UI
             tab2Layout.SetColumnSpan(controlPanel, 2);
             tab2Layout.Controls.Add(controlPanel, 0, 0);
 
+            // Yarı Oto kontrolleri
+            var lblSemiAuto = new Label
+            {
+                Text = "Yarı Oto Order: ",
+                Location = new Point(controlPanel.Width - 820, 25),
+                Size = new Size(150, 30),
+                ForeColor = Color.White,
+                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            controlPanel.Controls.Add(lblSemiAuto);
+
+            semiAutoCountTextBox = new TextBox
+            {
+                Location = new Point(controlPanel.Width - 660, 20),
+                Size = new Size(90, 40),
+                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
+                Text = "0",
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            controlPanel.Controls.Add(semiAutoCountTextBox);
+
+            updateSemiAutoButton = new Button
+            {
+                Text = "Güncelle",
+                Location = new Point(controlPanel.Width - 560, 12),
+                Size = new Size(100, 35),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(108, 166, 205),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Franklin Gothic", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            updateSemiAutoButton.FlatAppearance.BorderSize = 0;
+            updateSemiAutoButton.Click += UpdateSemiAutoButton_Click;
+            controlPanel.Controls.Add(updateSemiAutoButton);
+
+            // Manuel kontrolleri (konumları güncellendi)
             var lblManual = new Label
             {
                 Text = "Manuel Order Sayısı:",
-                Location = new Point(controlPanel.Width - 400, 25),
+                Location = new Point(controlPanel.Width - 400, 25), 
                 Size = new Size(180, 30),
                 ForeColor = Color.White,
                 Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
@@ -725,19 +766,21 @@ namespace KapsamDashboard.UI
 
             string query = @"
                 SELECT 
-                    CASE 
-                        WHEN IsManual = 1 THEN 'Manuel İşlem'
-                        ELSE 'Cihaz İşlem'
-                    END AS IslemTipi,
-                    COUNT(*) AS [Toplam Adet]
-                FROM [order].[Order]
-                WHERE AdministrationDate IS NOT NULL 
-                    AND AdministrationDate BETWEEN @StartDate AND @EndDate AND [order].[Order].PreparingStatus = 'Completed'
-                GROUP BY 
-                    CASE 
-                        WHEN IsManual = 1 THEN 'Manuel İşlem'
-                        ELSE 'Cihaz İşlem'
-                    END";
+    CASE 
+        WHEN IsManual = 1 THEN 'Manuel İşlem'
+        WHEN IsSemiAutomatic = 1 THEN 'Yarı Oto İşlem'
+        ELSE 'Cihaz İşlem'
+    END AS IslemTipi,
+    COUNT(*) AS [Toplam Adet]
+FROM [order].[Order]
+WHERE AdministrationDate IS NOT NULL 
+    AND AdministrationDate BETWEEN @StartDate AND @EndDate AND [order].[Order].PreparingStatus = 'Completed'
+GROUP BY 
+    CASE 
+        WHEN IsManual = 1 THEN 'Manuel İşlem'
+        WHEN IsSemiAutomatic = 1 THEN 'Yarı Oto İşlem'
+        ELSE 'Cihaz İşlem'
+    END";
 
             using (SqlConnection conn = new SqlConnection(ConnectionStringHelper.GetConnectionString()))
             {
@@ -749,8 +792,9 @@ namespace KapsamDashboard.UI
                 SqlDataReader reader = cmd.ExecuteReader();
 
                 Color[] colors = {
-                    Color.FromArgb(133, 193, 233),
-                    Color.FromArgb(85, 142, 213)
+                    Color.FromArgb(59, 59, 152),   // #3B3B98 - Cihaz İşlem
+                    Color.FromArgb(74, 105, 189),  // #4a69bd - Manuel İşlem  
+                    Color.FromArgb(112, 161, 255)  // #70a1ff - Yarı Oto İşlem
                 };
 
                 int colorIndex = 0;
@@ -801,7 +845,7 @@ namespace KapsamDashboard.UI
         private void LoadTable2Data()
         {
             string query = @"
-                SELECT TOP 100
+                SELECT TOP 50
                     CONCAT(C.Name, ' ', C.SurName) AS [Çalışan Ad Soyad],
                     M.Name AS [İlaç İsmi],
                     O.Id AS [Order_ID],
@@ -1066,6 +1110,7 @@ namespace KapsamDashboard.UI
                     }
                 }
 
+
                 LoadData();
             }
             catch (Exception ex)
@@ -1080,6 +1125,197 @@ namespace KapsamDashboard.UI
                 this.Cursor = Cursors.Default;
             }
         }
+        private void UpdateSemiAutoButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (!int.TryParse(semiAutoCountTextBox.Text, out int targetSemiAutoCount) || targetSemiAutoCount < 0)
+                {
+                    MessageBox.Show("Lütfen geçerli bir sayı girin.", "Hata",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                updateSemiAutoButton.Text = "Güncelleniyor...";
+                updateSemiAutoButton.Enabled = false;
+                this.Cursor = Cursors.WaitCursor;
+
+                using (SqlConnection conn = new SqlConnection(ConnectionStringHelper.GetConnectionString()))
+                {
+                    conn.Open();
+
+                    using (SqlTransaction transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Mevcut yarı oto işlem sayısını öğren
+                            string currentSemiAutoQuery = @"
+                        SELECT COUNT(*) 
+                        FROM [order].[Order] 
+                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
+                            AND PreparingStatus = 'Completed'
+                            AND IsSemiAutomatic = 1";
+
+                            SqlCommand currentCmd = new SqlCommand(currentSemiAutoQuery, conn, transaction);
+                            currentCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                            currentCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+                            int currentSemiAutoCount = (int)currentCmd.ExecuteScalar();
+
+                            // Mevcut cihaz işlem sayısını kontrol et (Manuel işlemleri hariç tut)
+                            string deviceQuery = @"
+                        SELECT COUNT(*) 
+                        FROM [order].[Order] 
+                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
+                            AND PreparingStatus = 'Completed'
+                            AND IsManual = 0 AND IsSemiAutomatic = 0";
+
+                            SqlCommand deviceCmd = new SqlCommand(deviceQuery, conn, transaction);
+                            deviceCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                            deviceCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+                            int deviceRecords = (int)deviceCmd.ExecuteScalar();
+
+                            // Hedef sayı cihaz kayıtlarından fazla ise hata ver
+                            if (targetSemiAutoCount > deviceRecords + currentSemiAutoCount)
+                            {
+                                transaction.Rollback();
+                                MessageBox.Show($"Hata: Girilen sayı ({targetSemiAutoCount}) mevcut cihaz işlem sayısından ({deviceRecords + currentSemiAutoCount}) fazla olamaz!", "Hata",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+
+                            if (targetSemiAutoCount > currentSemiAutoCount)
+                            {
+                                // Yarı oto işlem sayısını artır (cihaz işlemlerinden al)
+                                int additionalSemiAutoCount = targetSemiAutoCount - currentSemiAutoCount;
+
+                                string updateQuery = @"
+                            UPDATE [order].[Order] 
+                            SET IsSemiAutomatic = 1 
+                            WHERE Id IN (
+                                SELECT TOP (@AdditionalCount) Id 
+                                FROM [order].[Order]
+                                WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                                    AND PreparingStatus = 'Completed'
+                                    AND IsManual = 0 AND IsSemiAutomatic = 0
+                                ORDER BY OrderedDrugVolume ASC
+                            )";
+
+                                SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
+                                updateCmd.Parameters.AddWithValue("@AdditionalCount", additionalSemiAutoCount);
+                                updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                                updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+
+                                updateCmd.ExecuteNonQuery();
+                            }
+                            else if (targetSemiAutoCount < currentSemiAutoCount)
+                            {
+                                // Yarı oto işlem sayısını azalt (cihaz işlemlerine çevir)
+                                int decreaseSemiAutoCount = currentSemiAutoCount - targetSemiAutoCount;
+
+                                string updateQuery = @"
+                            UPDATE [order].[Order] 
+                            SET IsSemiAutomatic = 0 
+                            WHERE Id IN (
+                                SELECT TOP (@DecreaseCount) Id 
+                                FROM [order].[Order]
+                                WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                                    AND PreparingStatus = 'Completed'
+                                    AND IsSemiAutomatic = 1
+                                ORDER BY OrderedDrugVolume DESC
+                            )";
+
+                                SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
+                                updateCmd.Parameters.AddWithValue("@DecreaseCount", decreaseSemiAutoCount);
+                                updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                                updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+
+                                updateCmd.ExecuteNonQuery();
+                            }
+
+                            // Sonuçları doğrula
+                            string verifyQuery = @"
+                        SELECT 
+                            SUM(CASE WHEN IsManual = 1 THEN 1 ELSE 0 END) as ManuelSayisi,
+                            SUM(CASE WHEN IsSemiAutomatic = 1 THEN 1 ELSE 0 END) as YariOtoSayisi,
+                            SUM(CASE WHEN IsManual = 0 AND IsSemiAutomatic = 0 THEN 1 ELSE 0 END) as CihazSayisi
+                        FROM [order].[Order] 
+                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                            AND PreparingStatus = 'Completed'";
+
+                            SqlCommand verifyCmd = new SqlCommand(verifyQuery, conn, transaction);
+                            verifyCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                            verifyCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+
+                            int finalManuelSayisi = 0;
+                            int finalYariOtoSayisi = 0;
+                            int finalCihazSayisi = 0;
+
+                            using (SqlDataReader reader = verifyCmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    finalManuelSayisi = Convert.ToInt32(reader["ManuelSayisi"] ?? 0);
+                                    finalYariOtoSayisi = Convert.ToInt32(reader["YariOtoSayisi"] ?? 0);
+                                    finalCihazSayisi = Convert.ToInt32(reader["CihazSayisi"] ?? 0);
+                                }
+                            }
+
+                            transaction.Commit();
+
+                            string changeType = "";
+                            int changeAmount = 0;
+
+                            if (targetSemiAutoCount > currentSemiAutoCount)
+                            {
+                                changeType = "Eklenen";
+                                changeAmount = targetSemiAutoCount - currentSemiAutoCount;
+                            }
+                            else if (targetSemiAutoCount < currentSemiAutoCount)
+                            {
+                                changeType = "Azaltılan";
+                                changeAmount = currentSemiAutoCount - targetSemiAutoCount;
+                            }
+
+                            if (changeAmount > 0)
+                            {
+                                MessageBox.Show($"Database Güncellendi\n" +
+                                              $"Önceki Yarı Oto İşlem: {currentSemiAutoCount}\n" +
+                                              $"{changeType} Yarı Oto İşlem: {changeAmount}\n" +
+                                              $"Yeni Yarı Oto İşlem: {finalYariOtoSayisi}\n" +
+                                              $"Manuel İşlem: {finalManuelSayisi}\n" +
+                                              $"Cihaz İşlemi: {finalCihazSayisi}", "Başarılı",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show($"Değişiklik yapılmadı. Mevcut yarı oto işlem sayısı zaten {currentSemiAutoCount}.", "Bilgi",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+
+                            
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw ex;
+                        }
+                    }
+                }
+
+                LoadData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Güncelleme hatası:\n{ex.Message}", "Hata",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                updateSemiAutoButton.Text = "Güncelle";
+                updateSemiAutoButton.Enabled = true;
+                this.Cursor = Cursors.Default;
+            }
+        } 
         private Chart CreatePatientChart()
         {
             var chart = new Chart
