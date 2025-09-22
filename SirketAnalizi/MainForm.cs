@@ -774,7 +774,8 @@ namespace KapsamDashboard.UI
     COUNT(*) AS [Toplam Adet]
 FROM [order].[Order]
 WHERE AdministrationDate IS NOT NULL 
-    AND AdministrationDate BETWEEN @StartDate AND @EndDate AND [order].[Order].PreparingStatus = 'Completed'
+    AND AdministrationDate BETWEEN @StartDate AND @EndDate 
+    AND PreparingStatus = 'Completed'
 GROUP BY 
     CASE 
         WHEN IsManual = 1 THEN 'Manuel İşlem'
@@ -1150,38 +1151,40 @@ GROUP BY
                         {
                             // Mevcut yarı oto işlem sayısını öğren
                             string currentSemiAutoQuery = @"
-                        SELECT COUNT(*) 
-                        FROM [order].[Order] 
-                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
-                            AND PreparingStatus = 'Completed'
-                            AND IsSemiAutomatic = 1";
+                    SELECT COUNT(*) 
+                    FROM [order].[Order] 
+                    WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
+                        AND PreparingStatus = 'Completed'
+                        AND IsSemiAutomatic = 1";
 
                             SqlCommand currentCmd = new SqlCommand(currentSemiAutoQuery, conn, transaction);
                             currentCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
                             currentCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
                             int currentSemiAutoCount = (int)currentCmd.ExecuteScalar();
 
-                            // Mevcut cihaz işlem sayısını kontrol et (Manuel işlemleri hariç tut)
-                            string deviceQuery = @"
-                        SELECT COUNT(*) 
-                        FROM [order].[Order] 
-                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
-                            AND PreparingStatus = 'Completed'
-                            AND IsManual = 0 AND IsSemiAutomatic = 0";
+                            // *** DEĞİŞİKLİK BAŞLANGICI ***
+                            // Manuel olmayan toplam işlem sayısını kontrol et
+                            string totalNonManualQuery = @"
+                    SELECT COUNT(*) 
+                    FROM [order].[Order] 
+                    WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
+                        AND PreparingStatus = 'Completed'
+                        AND IsManual = 0"; // Hem cihaz hem yarı oto işlemler dahil
 
-                            SqlCommand deviceCmd = new SqlCommand(deviceQuery, conn, transaction);
-                            deviceCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            deviceCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-                            int deviceRecords = (int)deviceCmd.ExecuteScalar();
+                            SqlCommand totalCmd = new SqlCommand(totalNonManualQuery, conn, transaction);
+                            totalCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
+                            totalCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
+                            int totalNonManualRecords = (int)totalCmd.ExecuteScalar();
 
-                            // Hedef sayı cihaz kayıtlarından fazla ise hata ver
-                            if (targetSemiAutoCount > deviceRecords + currentSemiAutoCount)
+                            // Hedef sayı manuel olmayan toplam kayıtlardan fazla ise hata ver
+                            if (targetSemiAutoCount > totalNonManualRecords)
                             {
                                 transaction.Rollback();
-                                MessageBox.Show($"Hata: Girilen sayı ({targetSemiAutoCount}) mevcut cihaz işlem sayısından ({deviceRecords + currentSemiAutoCount}) fazla olamaz!", "Hata",
+                                MessageBox.Show($"Hata: Girilen sayı ({targetSemiAutoCount}) manuel olmayan toplam işlem sayısından ({totalNonManualRecords}) fazla olamaz!", "Hata",
                                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 return;
                             }
+                            // *** DEĞİŞİKLİK BİTİŞİ ***
 
                             if (targetSemiAutoCount > currentSemiAutoCount)
                             {
@@ -1189,16 +1192,16 @@ GROUP BY
                                 int additionalSemiAutoCount = targetSemiAutoCount - currentSemiAutoCount;
 
                                 string updateQuery = @"
-                            UPDATE [order].[Order] 
-                            SET IsSemiAutomatic = 1 
-                            WHERE Id IN (
-                                SELECT TOP (@AdditionalCount) Id 
-                                FROM [order].[Order]
-                                WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                                    AND PreparingStatus = 'Completed'
-                                    AND IsManual = 0 AND IsSemiAutomatic = 0
-                                ORDER BY OrderedDrugVolume ASC
-                            )";
+                        UPDATE [order].[Order] 
+                        SET IsSemiAutomatic = 1 
+                        WHERE Id IN (
+                            SELECT TOP (@AdditionalCount) Id 
+                            FROM [order].[Order]
+                            WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                                AND PreparingStatus = 'Completed'
+                                AND IsManual = 0 AND IsSemiAutomatic = 0
+                            ORDER BY OrderedDrugVolume ASC
+                        )";
 
                                 SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
                                 updateCmd.Parameters.AddWithValue("@AdditionalCount", additionalSemiAutoCount);
@@ -1213,16 +1216,16 @@ GROUP BY
                                 int decreaseSemiAutoCount = currentSemiAutoCount - targetSemiAutoCount;
 
                                 string updateQuery = @"
-                            UPDATE [order].[Order] 
-                            SET IsSemiAutomatic = 0 
-                            WHERE Id IN (
-                                SELECT TOP (@DecreaseCount) Id 
-                                FROM [order].[Order]
-                                WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                                    AND PreparingStatus = 'Completed'
-                                    AND IsSemiAutomatic = 1
-                                ORDER BY OrderedDrugVolume DESC
-                            )";
+                        UPDATE [order].[Order] 
+                        SET IsSemiAutomatic = 0 
+                        WHERE Id IN (
+                            SELECT TOP (@DecreaseCount) Id 
+                            FROM [order].[Order]
+                            WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                                AND PreparingStatus = 'Completed'
+                                AND IsSemiAutomatic = 1
+                            ORDER BY OrderedDrugVolume DESC
+                        )";
 
                                 SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
                                 updateCmd.Parameters.AddWithValue("@DecreaseCount", decreaseSemiAutoCount);
@@ -1234,13 +1237,13 @@ GROUP BY
 
                             // Sonuçları doğrula
                             string verifyQuery = @"
-                        SELECT 
-                            SUM(CASE WHEN IsManual = 1 THEN 1 ELSE 0 END) as ManuelSayisi,
-                            SUM(CASE WHEN IsSemiAutomatic = 1 THEN 1 ELSE 0 END) as YariOtoSayisi,
-                            SUM(CASE WHEN IsManual = 0 AND IsSemiAutomatic = 0 THEN 1 ELSE 0 END) as CihazSayisi
-                        FROM [order].[Order] 
-                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                            AND PreparingStatus = 'Completed'";
+                    SELECT 
+                        SUM(CASE WHEN IsManual = 1 THEN 1 ELSE 0 END) as ManuelSayisi,
+                        SUM(CASE WHEN IsSemiAutomatic = 1 THEN 1 ELSE 0 END) as YariOtoSayisi,
+                        SUM(CASE WHEN IsManual = 0 AND IsSemiAutomatic = 0 THEN 1 ELSE 0 END) as CihazSayisi
+                    FROM [order].[Order] 
+                    WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
+                        AND PreparingStatus = 'Completed'";
 
                             SqlCommand verifyCmd = new SqlCommand(verifyQuery, conn, transaction);
                             verifyCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
@@ -1291,8 +1294,6 @@ GROUP BY
                                 MessageBox.Show($"Değişiklik yapılmadı. Mevcut yarı oto işlem sayısı zaten {currentSemiAutoCount}.", "Bilgi",
                                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                             }
-
-                            
                         }
                         catch (Exception ex)
                         {
@@ -1315,7 +1316,7 @@ GROUP BY
                 updateSemiAutoButton.Enabled = true;
                 this.Cursor = Cursors.Default;
             }
-        } 
+        }
         private Chart CreatePatientChart()
         {
             var chart = new Chart
