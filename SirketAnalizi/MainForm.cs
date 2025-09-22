@@ -324,7 +324,7 @@ namespace KapsamDashboard.UI
                 Location = new Point(controlPanel.Width - 660, 20),
                 Size = new Size(90, 40),
                 Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
-                Text = "0",
+                Text = "",
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             controlPanel.Controls.Add(semiAutoCountTextBox);
@@ -362,7 +362,7 @@ namespace KapsamDashboard.UI
                 Location = new Point(controlPanel.Width - 210, 20),
                 Size = new Size(90, 40),
                 Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
-                Text = "10",
+                Text = "",
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
             controlPanel.Controls.Add(manualCountTextBox);
