@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace KapsamDashboard.UI
+﻿namespace KapsamDashboard.UI
 {
     partial class MainForm
     {
@@ -34,19 +32,12 @@ namespace KapsamDashboard.UI
             // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(801, 473);
+            this.ClientSize = new System.Drawing.Size(1600, 1000);
             this.Name = "MainForm";
-            this.Text = "MainForm";
-            this.Load += new System.EventHandler(this.MainForm_Load);
+            this.Text = "Kapsam Dashboard - Anlık Veri";
             this.ResumeLayout(false);
-
-        }
-
-        private void MainForm_Load(object sender, EventArgs e)
-        {
-            throw new NotImplementedException();
         }
 
         #endregion

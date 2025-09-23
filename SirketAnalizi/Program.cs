@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KapsamDashboard.UI;
+using System;
 using System.Windows.Forms;
 
 namespace KapsamDashboard.UI

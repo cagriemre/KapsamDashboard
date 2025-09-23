@@ -5,7 +5,7 @@ VisualStudioVersion = 17.14.36310.24
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KapsamDashboard.UI", "SirketAnalizi\KapsamDashboard.UI.csproj", "{FF620C06-AADA-4D63-8A17-64F9A8F2F210}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "KapsamDashboard.Setup", "KapsamDashboard.Setup\KapsamDashboard.Setup.vdproj", "{713BF929-4EAD-3B17-58ED-C99C8293510D}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Kapsam.UI.Setup", "Kapsam.UI.Setup\Kapsam.UI.Setup.vdproj", "{B582CB42-15A9-10AD-6DB5-06E894C44488}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +17,8 @@ Global
 		{FF620C06-AADA-4D63-8A17-64F9A8F2F210}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF620C06-AADA-4D63-8A17-64F9A8F2F210}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FF620C06-AADA-4D63-8A17-64F9A8F2F210}.Release|Any CPU.Build.0 = Release|Any CPU
-		{713BF929-4EAD-3B17-58ED-C99C8293510D}.Debug|Any CPU.ActiveCfg = Debug
-		{713BF929-4EAD-3B17-58ED-C99C8293510D}.Release|Any CPU.ActiveCfg = Release
+		{B582CB42-15A9-10AD-6DB5-06E894C44488}.Debug|Any CPU.ActiveCfg = Debug
+		{B582CB42-15A9-10AD-6DB5-06E894C44488}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

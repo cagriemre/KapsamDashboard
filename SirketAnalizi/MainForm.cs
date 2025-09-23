@@ -37,10 +37,7 @@ namespace KapsamDashboard.UI
         private TableLayoutPanel tab2Layout;
         private DataGridView dataGridView3;
         private DataGridView dataGridView4;
-        private TextBox manualCountTextBox;
-        private Button updateManualButton;
-        private TextBox semiAutoCountTextBox;
-        private Button updateSemiAutoButton;
+        
 
         public MainForm()
         {
@@ -279,7 +276,7 @@ namespace KapsamDashboard.UI
             };
             mainTabControl.TabPages.Add(tab2);
 
-            // Tab 2 Layout - 3 satır: kontroller, chart, tablolar
+            // Tab 2 Layout - 3 satır: boş alan, chart, tablolar
             tab2Layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -289,106 +286,31 @@ namespace KapsamDashboard.UI
                 BackColor = Color.FromArgb(25, 42, 86)
             };
 
-            tab2Layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60)); // Sütun grafiği için %60
-            tab2Layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40)); // Pie chart için %40
-            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80)); // TextBox ve Button için
+            tab2Layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); // Sütun grafiği için %60
+            tab2Layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); // Pie chart için %40
+            tab2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20)); // Boş alan için
             tab2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 60)); // Grafikler için %60
             tab2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 40)); // Tablolar için %40
             tab2.Controls.Add(tab2Layout);
 
-            // TextBox ve Button için panel
-            var controlPanel = new Panel
+            // Boş panel (eski kontrollerin olduğu yer)
+            var emptyPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(25, 42, 86),
                 Margin = new Padding(8)
             };
-            tab2Layout.Controls.Add(controlPanel, 0, 0);
-            tab2Layout.SetColumnSpan(controlPanel, 2);
-            tab2Layout.Controls.Add(controlPanel, 0, 0);
+            tab2Layout.Controls.Add(emptyPanel, 0, 0);
+            tab2Layout.SetColumnSpan(emptyPanel, 2);
 
-            // Yarı Oto kontrolleri
-            var lblSemiAuto = new Label
-            {
-                Text = "Yarı Oto Order: ",
-                Location = new Point(controlPanel.Width - 820, 25),
-                Size = new Size(150, 30),
-                ForeColor = Color.White,
-                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            controlPanel.Controls.Add(lblSemiAuto);
-
-            semiAutoCountTextBox = new TextBox
-            {
-                Location = new Point(controlPanel.Width - 660, 20),
-                Size = new Size(90, 40),
-                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
-                Text = "",
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            controlPanel.Controls.Add(semiAutoCountTextBox);
-
-            updateSemiAutoButton = new Button
-            {
-                Text = "Güncelle",
-                Location = new Point(controlPanel.Width - 560, 12),
-                Size = new Size(100, 35),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(108, 166, 205),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Franklin Gothic", 10, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            updateSemiAutoButton.FlatAppearance.BorderSize = 0;
-            updateSemiAutoButton.Click += UpdateSemiAutoButton_Click;
-            controlPanel.Controls.Add(updateSemiAutoButton);
-
-            // Manuel kontrolleri (konumları güncellendi)
-            var lblManual = new Label
-            {
-                Text = "Manuel Order Sayısı:",
-                Location = new Point(controlPanel.Width - 400, 25), 
-                Size = new Size(180, 30),
-                ForeColor = Color.White,
-                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            controlPanel.Controls.Add(lblManual);
-
-            manualCountTextBox = new TextBox
-            {
-                Location = new Point(controlPanel.Width - 210, 20),
-                Size = new Size(90, 40),
-                Font = new Font("Franklin Gothic", 12, FontStyle.Bold),
-                Text = "",
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            controlPanel.Controls.Add(manualCountTextBox);
-
-            updateManualButton = new Button
-            {
-                Text = "Güncelle",
-                Location = new Point(controlPanel.Width - 110, 12),
-                Size = new Size(100, 35),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                BackColor = Color.FromArgb(108, 166, 205),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Franklin Gothic", 10, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            updateManualButton.FlatAppearance.BorderSize = 0;
-            updateManualButton.Click += UpdateManualButton_Click;
-            controlPanel.Controls.Add(updateManualButton);
-
-            // Overdose Chart - 2 sütuna yayılsın
+            // Overdose Chart - Sol tarafta
             overdoseChart = CreateOverdoseChart();
-            tab2Layout.Controls.Add(overdoseChart, 0, 1);  // Sol tarafta
+            tab2Layout.Controls.Add(overdoseChart, 0, 1);
 
+            // Pie Chart - Sağ tarafta
             pieChart = CreatePieChart();
-            tab2Layout.Controls.Add(pieChart, 1, 1);  // Sağ tarafta
+            tab2Layout.Controls.Add(pieChart, 1, 1);
+
             // İlk tablo
             dataGridView3 = CreateDataGridView("Overdose Anonim-Seyreltme Analizi");
             tab2Layout.Controls.Add(dataGridView3, 0, 2);
@@ -937,386 +859,8 @@ GROUP BY
                 dataGridView4.DataSource = dt;
             }
         }
-        private void UpdateManualButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!int.TryParse(manualCountTextBox.Text, out int targetManualCount) || targetManualCount < 0)
-                {
-                    MessageBox.Show("Lütfen geçerli bir sayı girin.", "Hata",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                updateManualButton.Text = "Güncelleniyor...";
-                updateManualButton.Enabled = false;
-                this.Cursor = Cursors.WaitCursor;
-
-                using (SqlConnection conn = new SqlConnection(ConnectionStringHelper.GetConnectionString()))
-                {
-                    conn.Open();
-
-                    using (SqlTransaction transaction = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Mevcut manuel işlem sayısını öğren
-                            string currentManualQuery = @"
-                        SELECT COUNT(*) 
-                        FROM [order].[Order] 
-                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
-                            AND PreparingStatus = 'Completed'
-                            AND IsManual = 1";
-
-                            SqlCommand currentCmd = new SqlCommand(currentManualQuery, conn, transaction);
-                            currentCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            currentCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-                            int currentManualCount = (int)currentCmd.ExecuteScalar();
-
-                            // Toplam kayıt sayısını kontrol et
-                            string totalQuery = @"
-                        SELECT COUNT(*) 
-                        FROM [order].[Order] 
-                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
-                            AND PreparingStatus = 'Completed'";
-
-                            SqlCommand totalCmd = new SqlCommand(totalQuery, conn, transaction);
-                            totalCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            totalCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-                            int totalRecords = (int)totalCmd.ExecuteScalar();
-
-                            // Hedef sayı toplam kayıttan fazla ise hata ver
-                            if (targetManualCount > totalRecords)
-                            {
-                                transaction.Rollback();
-                                MessageBox.Show($"Hata: Girilen sayı ({targetManualCount}) toplam kayıt sayısından ({totalRecords}) fazla olamaz!", "Hata",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
-                            }
-
-                            if (targetManualCount > currentManualCount)
-                            {
-                                // Manuel işlem sayısını artır
-                                int additionalManualCount = targetManualCount - currentManualCount;
-
-                                string updateQuery = @"
-                            UPDATE [order].[Order] 
-                            SET IsManual = 1 
-                            WHERE Id IN (
-                                SELECT TOP (@AdditionalCount) Id 
-                                FROM [order].[Order]
-                                WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                                    AND PreparingStatus = 'Completed'
-                                    AND IsManual = 0
-                                ORDER BY OrderedDrugVolume ASC
-                            )";
-
-                                SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
-                                updateCmd.Parameters.AddWithValue("@AdditionalCount", additionalManualCount);
-                                updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                                updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-
-                                int updatedRecords = updateCmd.ExecuteNonQuery();
-                            }
-                            else if (targetManualCount < currentManualCount)
-                            {
-                                // Manuel işlem sayısını azalt
-                                int decreaseManualCount = currentManualCount - targetManualCount;
-
-                                string updateQuery = @"
-                            UPDATE [order].[Order] 
-                            SET IsManual = 0 
-                            WHERE Id IN (
-                                SELECT TOP (@DecreaseCount) Id 
-                                FROM [order].[Order]
-                                WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                                    AND PreparingStatus = 'Completed'
-                                    AND IsManual = 1
-                                ORDER BY OrderedDrugVolume DESC
-                            )";
-
-                                SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
-                                updateCmd.Parameters.AddWithValue("@DecreaseCount", decreaseManualCount);
-                                updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                                updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-
-                                int updatedRecords = updateCmd.ExecuteNonQuery();
-                            }
-
-                            // Sonuçları doğrula
-                            string verifyQuery = @"
-                        SELECT 
-                            SUM(CASE WHEN IsManual = 1 THEN 1 ELSE 0 END) as ManuelSayisi,
-                            SUM(CASE WHEN IsManual = 0 THEN 1 ELSE 0 END) as CihazSayisi
-                        FROM [order].[Order] 
-                        WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                            AND PreparingStatus = 'Completed'";
-
-                            SqlCommand verifyCmd = new SqlCommand(verifyQuery, conn, transaction);
-                            verifyCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            verifyCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-
-                            int finalManuelSayisi = 0;
-                            int finalCihazSayisi = 0;
-
-                            using (SqlDataReader reader = verifyCmd.ExecuteReader())
-                            {
-                                if (reader.Read())
-                                {
-                                    finalManuelSayisi = Convert.ToInt32(reader["ManuelSayisi"] ?? 0);
-                                    finalCihazSayisi = Convert.ToInt32(reader["CihazSayisi"] ?? 0);
-                                }
-                            }
-
-                            transaction.Commit();
-
-                            string changeType = "";
-                            int changeAmount = 0;
-
-                            if (targetManualCount > currentManualCount)
-                            {
-                                changeType = "Eklenen";
-                                changeAmount = targetManualCount - currentManualCount;
-                            }
-                            else if (targetManualCount < currentManualCount)
-                            {
-                                changeType = "Azaltılan";
-                                changeAmount = currentManualCount - targetManualCount;
-                            }
-                            else
-                            {
-                                changeType = "Değişiklik yapılmadı";
-                            }
-
-                            if (changeAmount > 0)
-                            {
-                                MessageBox.Show($"Database Güncellendi\n" +
-                                              $"Önceki Manuel İşlem: {currentManualCount}\n" +
-                                              $"{changeType} Manuel İşlem: {changeAmount}\n" +
-                                              $"Yeni Manuel İşlem: {finalManuelSayisi}\n" +
-                                              $"Cihaz İşlemi: {finalCihazSayisi}", "Başarılı",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                            else
-                            {
-                                MessageBox.Show($"Değişiklik yapılmadı. Mevcut manuel işlem sayısı zaten {currentManualCount}.", "Bilgi",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            throw ex;
-                        }
-                    }
-                }
-
-
-                LoadData();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Güncelleme hatası:\n{ex.Message}", "Hata",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                updateManualButton.Text = "Güncelle";
-                updateManualButton.Enabled = true;
-                this.Cursor = Cursors.Default;
-            }
-        }
-        private void UpdateSemiAutoButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (!int.TryParse(semiAutoCountTextBox.Text, out int targetSemiAutoCount) || targetSemiAutoCount < 0)
-                {
-                    MessageBox.Show("Lütfen geçerli bir sayı girin.", "Hata",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                updateSemiAutoButton.Text = "Güncelleniyor...";
-                updateSemiAutoButton.Enabled = false;
-                this.Cursor = Cursors.WaitCursor;
-
-                using (SqlConnection conn = new SqlConnection(ConnectionStringHelper.GetConnectionString()))
-                {
-                    conn.Open();
-
-                    using (SqlTransaction transaction = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Mevcut yarı oto işlem sayısını öğren
-                            string currentSemiAutoQuery = @"
-                    SELECT COUNT(*) 
-                    FROM [order].[Order] 
-                    WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
-                        AND PreparingStatus = 'Completed'
-                        AND IsSemiAutomatic = 1";
-
-                            SqlCommand currentCmd = new SqlCommand(currentSemiAutoQuery, conn, transaction);
-                            currentCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            currentCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-                            int currentSemiAutoCount = (int)currentCmd.ExecuteScalar();
-
-                            // *** DEĞİŞİKLİK BAŞLANGICI ***
-                            // Manuel olmayan toplam işlem sayısını kontrol et
-                            string totalNonManualQuery = @"
-                    SELECT COUNT(*) 
-                    FROM [order].[Order] 
-                    WHERE AdministrationDate BETWEEN @StartDate AND @EndDate 
-                        AND PreparingStatus = 'Completed'
-                        AND IsManual = 0"; // Hem cihaz hem yarı oto işlemler dahil
-
-                            SqlCommand totalCmd = new SqlCommand(totalNonManualQuery, conn, transaction);
-                            totalCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            totalCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-                            int totalNonManualRecords = (int)totalCmd.ExecuteScalar();
-
-                            // Hedef sayı manuel olmayan toplam kayıtlardan fazla ise hata ver
-                            if (targetSemiAutoCount > totalNonManualRecords)
-                            {
-                                transaction.Rollback();
-                                MessageBox.Show($"Hata: Girilen sayı ({targetSemiAutoCount}) manuel olmayan toplam işlem sayısından ({totalNonManualRecords}) fazla olamaz!", "Hata",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                return;
-                            }
-                            // *** DEĞİŞİKLİK BİTİŞİ ***
-
-                            if (targetSemiAutoCount > currentSemiAutoCount)
-                            {
-                                // Yarı oto işlem sayısını artır (cihaz işlemlerinden al)
-                                int additionalSemiAutoCount = targetSemiAutoCount - currentSemiAutoCount;
-
-                                string updateQuery = @"
-                        UPDATE [order].[Order] 
-                        SET IsSemiAutomatic = 1 
-                        WHERE Id IN (
-                            SELECT TOP (@AdditionalCount) Id 
-                            FROM [order].[Order]
-                            WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                                AND PreparingStatus = 'Completed'
-                                AND IsManual = 0 AND IsSemiAutomatic = 0
-                            ORDER BY OrderedDrugVolume ASC
-                        )";
-
-                                SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
-                                updateCmd.Parameters.AddWithValue("@AdditionalCount", additionalSemiAutoCount);
-                                updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                                updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-
-                                updateCmd.ExecuteNonQuery();
-                            }
-                            else if (targetSemiAutoCount < currentSemiAutoCount)
-                            {
-                                // Yarı oto işlem sayısını azalt (cihaz işlemlerine çevir)
-                                int decreaseSemiAutoCount = currentSemiAutoCount - targetSemiAutoCount;
-
-                                string updateQuery = @"
-                        UPDATE [order].[Order] 
-                        SET IsSemiAutomatic = 0 
-                        WHERE Id IN (
-                            SELECT TOP (@DecreaseCount) Id 
-                            FROM [order].[Order]
-                            WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                                AND PreparingStatus = 'Completed'
-                                AND IsSemiAutomatic = 1
-                            ORDER BY OrderedDrugVolume DESC
-                        )";
-
-                                SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction);
-                                updateCmd.Parameters.AddWithValue("@DecreaseCount", decreaseSemiAutoCount);
-                                updateCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                                updateCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-
-                                updateCmd.ExecuteNonQuery();
-                            }
-
-                            // Sonuçları doğrula
-                            string verifyQuery = @"
-                    SELECT 
-                        SUM(CASE WHEN IsManual = 1 THEN 1 ELSE 0 END) as ManuelSayisi,
-                        SUM(CASE WHEN IsSemiAutomatic = 1 THEN 1 ELSE 0 END) as YariOtoSayisi,
-                        SUM(CASE WHEN IsManual = 0 AND IsSemiAutomatic = 0 THEN 1 ELSE 0 END) as CihazSayisi
-                    FROM [order].[Order] 
-                    WHERE AdministrationDate BETWEEN @StartDate AND @EndDate
-                        AND PreparingStatus = 'Completed'";
-
-                            SqlCommand verifyCmd = new SqlCommand(verifyQuery, conn, transaction);
-                            verifyCmd.Parameters.AddWithValue("@StartDate", startDatePicker.Value.Date);
-                            verifyCmd.Parameters.AddWithValue("@EndDate", endDatePicker.Value.Date.AddDays(1).AddSeconds(-1));
-
-                            int finalManuelSayisi = 0;
-                            int finalYariOtoSayisi = 0;
-                            int finalCihazSayisi = 0;
-
-                            using (SqlDataReader reader = verifyCmd.ExecuteReader())
-                            {
-                                if (reader.Read())
-                                {
-                                    finalManuelSayisi = Convert.ToInt32(reader["ManuelSayisi"] ?? 0);
-                                    finalYariOtoSayisi = Convert.ToInt32(reader["YariOtoSayisi"] ?? 0);
-                                    finalCihazSayisi = Convert.ToInt32(reader["CihazSayisi"] ?? 0);
-                                }
-                            }
-
-                            transaction.Commit();
-
-                            string changeType = "";
-                            int changeAmount = 0;
-
-                            if (targetSemiAutoCount > currentSemiAutoCount)
-                            {
-                                changeType = "Eklenen";
-                                changeAmount = targetSemiAutoCount - currentSemiAutoCount;
-                            }
-                            else if (targetSemiAutoCount < currentSemiAutoCount)
-                            {
-                                changeType = "Azaltılan";
-                                changeAmount = currentSemiAutoCount - targetSemiAutoCount;
-                            }
-
-                            if (changeAmount > 0)
-                            {
-                                MessageBox.Show($"Database Güncellendi\n" +
-                                              $"Önceki Yarı Oto İşlem: {currentSemiAutoCount}\n" +
-                                              $"{changeType} Yarı Oto İşlem: {changeAmount}\n" +
-                                              $"Yeni Yarı Oto İşlem: {finalYariOtoSayisi}\n" +
-                                              $"Manuel İşlem: {finalManuelSayisi}\n" +
-                                              $"Cihaz İşlemi: {finalCihazSayisi}", "Başarılı",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                            else
-                            {
-                                MessageBox.Show($"Değişiklik yapılmadı. Mevcut yarı oto işlem sayısı zaten {currentSemiAutoCount}.", "Bilgi",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            throw ex;
-                        }
-                    }
-                }
-
-                LoadData();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Güncelleme hatası:\n{ex.Message}", "Hata",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                updateSemiAutoButton.Text = "Güncelle";
-                updateSemiAutoButton.Enabled = true;
-                this.Cursor = Cursors.Default;
-            }
-        }
+        
+        
         private Chart CreatePatientChart()
         {
             var chart = new Chart
@@ -1411,6 +955,5 @@ GROUP BY
             LoadData();
         }
     }
-
 
 }
